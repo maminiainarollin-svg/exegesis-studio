@@ -823,9 +823,6 @@ async function aiGenerate(section) {
     resultDiv.textContent = text;
     resultDiv.classList.add('visible');
 
-    // Also populate textarea if empty
-    const ta = document.getElementById('txt-' + section);
-    if (ta && !ta.value.trim()) ta.value = text;
     setStatus(T[lang].status_done);
   } catch (e) {
     resultDiv.textContent = 'Erreur de connexion à l\'IA.';
