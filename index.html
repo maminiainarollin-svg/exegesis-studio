@@ -809,7 +809,7 @@ async function aiGenerate(section) {
   const prompt = promptFn ? promptFn(ref, genre) : `Analyse exégétique de ${ref}.`;
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://exegesis-proxy.maminiainarollin.workers.dev", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -948,7 +948,7 @@ async function aiStructure() {
     : `Ianao dia manam-pahaizana amin'ny literatioran'ny Baiboly. Analize ny firafitry ny ${ref}:\n${versesText}\n\nFantaro: 1) Karazana firafitra (kiasma, parallélisme, inclusion...), 2) Singa mifanentana miaraka amin'ny marika (A,B,C,X), 3) Ivon-toerana raha kiasma. Atolory marika ho an'ny andininy tsirairay. 200 teny faramparany.`;
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://exegesis-proxy.maminiainarollin.workers.dev", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
