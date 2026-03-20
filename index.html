@@ -97,7 +97,7 @@ header { text-align: center; padding: 3rem 1rem 2.5rem; }
     <h2><span>📖</span> <span id="lbl-ref">Passage & contexte</span></h2>
     <div class="row-2">
       <div class="field"><label id="lbl-ref-input">Référence biblique</label><input type="text" id="inp-ref" placeholder="ex. Jean 15:1-11" /></div>
-      <div class="field"><label id="lbl-theme">Thème central</label><input type="text" id="inp-theme" placeholder="ex. Demeurer en Christ" /></div>
+      <div class="field"><label id="lbl-theme">Thème central</label><div style="display:flex;gap:0.5rem;align-items:center;"><input type="text" id="inp-theme" placeholder="ex. Demeurer en Christ" style="flex:1" /><button onclick="suggestThemes()" id="suggest-btn" style="background:rgba(78,205,196,0.1);border:1px solid rgba(78,205,196,0.3);color:#4ecdc4;border-radius:6px;padding:0.55rem 0.8rem;cursor:pointer;font-size:0.8rem;white-space:nowrap;flex-shrink:0;">✦ Suggérer</button></div><div id="theme-suggestions" style="display:none;margin-top:0.6rem;flex-wrap:wrap;gap:0.4rem;"></div></div>
     </div>
     <div class="row-2">
       <div class="field"><label id="lbl-duree">Durée de la séance</label>
@@ -188,6 +188,37 @@ function showTab(tab) {
 }
 
 function setStatus(msg) { document.getElementById('status-bar').textContent = msg; }
+
+async function suggestThemes() {
+  const ref = document.getElementById('inp-ref').value.trim();
+  if (!ref) { setStatus(lang==='fr' ? "Entre d'abord une référence biblique" : "Ampidiro aloha ny andalana"); return; }
+  const btn = document.getElementById('suggest-btn');
+  const box = document.getElementById('theme-suggestions');
+  btn.disabled = true;
+  btn.innerHTML = '<span style="display:inline-block;width:10px;height:10px;border:1.5px solid transparent;border-top-color:#4ecdc4;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;"></span>';
+  setStatus(lang==='fr' ? 'Recherche de thèmes...' : 'Mitady lohahevitra...');
+  const prompt = lang==='fr'
+    ? `Pour le passage biblique ${ref}, propose exactement 4 thèmes centraux possibles. JSON UNIQUEMENT: {"themes":["thème 1","thème 2","thème 3","thème 4"]}. Thèmes courts (3-6 mots). En français.`
+    : `Ho an'ny andalana ${ref}, atolory lohahevitra foibe 4 azo atao. JSON IHANY: {"themes":["lohahevitra 1","lohahevitra 2","lohahevitra 3","lohahevitra 4"]}. Fohy (teny 3-6). Amin'ny malgache.`;
+  try {
+    const raw = await callAI(prompt);
+    const data = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    box.style.display = 'flex';
+    box.innerHTML = data.themes.map(t => `<button onclick="selectTheme(this)" style="background:rgba(230,184,74,0.08);border:1px solid rgba(230,184,74,0.25);color:#e6b84a;border-radius:20px;padding:0.3rem 0.9rem;cursor:pointer;font-family:'Crimson Pro',serif;font-size:0.92rem;transition:all 0.2s;">${t}</button>`).join('');
+    setStatus(lang==='fr' ? '✓ Clique sur un thème pour le sélectionner' : '✓ Tsindrio ny lohahevitra iray');
+  } catch(e) {
+    setStatus(lang==='fr' ? '✕ Erreur lors de la suggestion' : '✕ Hadisoana');
+  }
+  btn.disabled = false;
+  btn.innerHTML = '✦ Suggérer';
+}
+
+function selectTheme(btn) {
+  document.getElementById('inp-theme').value = btn.textContent;
+  document.querySelectorAll('#theme-suggestions button').forEach(b => { b.style.borderColor='rgba(230,184,74,0.25)'; b.style.background='rgba(230,184,74,0.08)'; });
+  btn.style.borderColor = '#e6b84a';
+  btn.style.background = 'rgba(230,184,74,0.25)';
+}
 
 async function callAI(prompt) {
   const res = await fetch(PROXY, {
