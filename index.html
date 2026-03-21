@@ -423,8 +423,8 @@ async function generateAll() {
     renderQuestions(await callAI(p6));
 
     const p7 = lang==='fr'
-      ? `Tu es dans une église protestante. Pour le thème "${theme||ref}", suggère 5 cantiques/chants protestants adaptés (hymnes classiques, louange contemporaine francophone ou malgache). JSON UNIQUEMENT: {"chants":[{"titre":"...","type":"Hymne/Louange/Cantique","moment":"Ouverture/Adoration/Offrande/Clôture","pourquoi":"..."}]}. En français.`
-      : `Fiangonana protestanta. Ho an'ny lohahevitra "${theme||ref}", atolory hira protestanta 5 mifanaraka. JSON IHANY: {"chants":[{"titre":"...","type":"...","moment":"...","pourquoi":"..."}]}. Amin'ny malgache.`;
+      ? `Tu es musicien dans une église protestante francophone. Pour le thème "${theme||ref}", suggère 5 chants/cantiques protestants avec références précises. Inclus : hymnes classiques (Alléluia, Louange & Adoration, Arc-en-ciel), chants contemporains francophones (Glorious, Hillsong, Seigneur nous voici), ou chants malgaches protestants (FFPM, FJKM). JSON UNIQUEMENT: {"chants":[{"titre":"...","auteur":"...","recueil":"ex: Alléluia n°247 / Louange & Adoration n°89 / FFPM n°312 / contemporain","moment":"Ouverture/Adoration/Méditation/Offrande/Clôture","incipit":"premiers mots du chant...","pourquoi":"lien avec le thème en 1 phrase"}]}. Sois précis sur les références de recueil. En français.`
+      : `Mpihira fiangonana protestanta. Ho an'ny lohahevitra "${theme||ref}", atolory hira protestanta 5 miaraka amin'ny laharana mazava (FFPM, FJKM, Alléluia, hira maoderina). JSON IHANY: {"chants":[{"titre":"...","auteur":"...","recueil":"ex: FFPM laharana 312","moment":"...","incipit":"teny voalohany...","pourquoi":"..."}]}. Amin'ny malgache.`;
     renderChants(await callAI(p7));
 
     currentSession = { ref, theme, duree, nb, date: new Date().toLocaleDateString('fr-FR'), content: { principal: document.getElementById('msg-principal').textContent, points: document.getElementById('msg-points').textContent, illus: document.getElementById('msg-illus').textContent, appel: document.getElementById('msg-appel').textContent } };
@@ -455,11 +455,18 @@ function renderChants(raw) {
   const c = document.getElementById('chants-container');
   try {
     const data = JSON.parse(raw.replace(/```json|```/g,'').trim());
-    c.innerHTML = data.chants.map(ch=>`
+    c.innerHTML = data.chants.map((ch,i)=>`
       <div class="chant-card">
-        <div class="chant-ref">${ch.moment} · ${ch.type}</div>
-        <div class="chant-titre">🎵 ${ch.titre}</div>
-        <div class="chant-lien">${ch.pourquoi}</div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem;margin-bottom:0.5rem;">
+          <div>
+            <div class="chant-ref">${ch.moment}${ch.type?' · '+ch.type:''}</div>
+            <div class="chant-titre">🎵 ${ch.titre}</div>
+            ${ch.auteur?`<div style="font-family:'Lato',sans-serif;font-size:0.75rem;color:var(--text-dim);margin-top:0.1rem;">✍ ${ch.auteur}</div>`:''}
+          </div>
+          <div style="background:rgba(201,116,138,0.12);border:1px solid rgba(201,116,138,0.25);border-radius:4px;padding:0.25rem 0.6rem;font-family:'Lato',sans-serif;font-size:0.72rem;color:var(--rose);white-space:nowrap;flex-shrink:0;">${ch.recueil||'—'}</div>
+        </div>
+        ${ch.incipit?`<div style="font-family:'Crimson Pro',serif;font-size:0.92rem;color:var(--text);font-style:italic;border-left:2px solid rgba(201,116,138,0.3);padding-left:0.7rem;margin:0.4rem 0;">"${ch.incipit}"</div>`:''}
+        <div class="chant-lien" style="margin-top:0.4rem;">→ ${ch.pourquoi}</div>
       </div>`).join('');
   } catch { c.innerHTML = `<div class="result-block"><div class="result-block-body">${raw}</div></div>`; }
 }
