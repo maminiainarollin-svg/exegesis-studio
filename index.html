@@ -61,6 +61,11 @@ header { text-align: center; padding: 2.5rem 1rem 2rem; }
 .question-list { display: flex; flex-direction: column; gap: 0.8rem; }
 .question-card { background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--teal); border-radius: var(--radius); padding: 1rem 1.2rem; font-family: 'Crimson Pro', serif; font-size: 1.02rem; line-height: 1.6; }
 .question-card .q-num { font-family: 'Lato', sans-serif; font-size: 0.72rem; color: var(--teal); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.3rem; }
+.question-card .q-text { margin-bottom: 0.5rem; }
+.q-answer-toggle { font-family: 'Lato', sans-serif; font-size: 0.75rem; color: var(--text-dim); cursor: pointer; padding: 0.3rem 0; display: flex; align-items: center; gap: 0.4rem; transition: color 0.15s; user-select: none; margin-top: 0.2rem; }
+.q-answer-toggle:hover { color: var(--teal); }
+.toggle-icon { font-size: 0.7rem; color: var(--teal); }
+.q-answer { background: rgba(78,205,196,0.05); border-left: 2px solid rgba(78,205,196,0.3); padding: 0.7rem 1rem; margin-top: 0.4rem; font-family: 'Crimson Pro', serif; font-size: 0.95rem; color: var(--text-mid); line-height: 1.7; border-radius: 0 4px 4px 0; font-style: italic; }
 .seance-step { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.2rem; margin-bottom: 0.8rem; display: flex; gap: 1rem; align-items: flex-start; }
 .step-time { background: var(--gold-dim); border: 1px solid var(--gold-border); border-radius: 4px; color: var(--gold); font-family: 'Lato', sans-serif; font-size: 0.75rem; padding: 0.2rem 0.5rem; white-space: nowrap; flex-shrink: 0; margin-top: 0.15rem; }
 .step-content h4 { font-family: 'Playfair Display', serif; font-size: 0.95rem; color: var(--text); margin-bottom: 0.2rem; }
@@ -418,8 +423,8 @@ async function generateAll() {
     renderSeance(await callAI(p5));
 
     const p6 = lang==='fr'
-      ? `6 questions discussion groupe mixte sur ${ref}${theme?` (${theme})`:''}: 2 observation, 2 réflexion, 2 application. JSON: {"questions":[{"num":1,"type":"Observation","text":"..."}]}. En français.`
-      : `Fanontaniana 6 vondrona mixa momba ny ${ref}: 2 fijery, 2 fisainana, 2 fampiharana. JSON: {"questions":[{"num":1,"type":"...","text":"..."}]}. Amin'ny malgache.`;
+      ? `Génère 6 questions de discussion pour groupe mixte sur ${ref}${theme?' ('+theme+')':''}. Types: 2 Observation (ce que le texte dit), 2 Réflexion (ce que ça signifie), 2 Application (comment le vivre). Pour chaque question, ajoute aussi une réponse suggérée (2-4 phrases) pour guider l'animateur. JSON UNIQUEMENT: {"questions":[{"num":1,"type":"Observation","text":"...","reponse":"réponse suggérée pour guider l'animateur..."}]}. En français.`
+      : `Mamorona fanontaniana hifanakalozan-kevitra 6 ho an'ny vondrona mixa momba ny ${ref}${theme?' ('+theme+')':''}. Karazana: 2 Fijery, 2 Fisainana, 2 Fampiharana. Ho an'ny fanontaniana tsirairay, omeo valiny voatoro (fehezanteny 2-4). JSON IHANY: {"questions":[{"num":1,"type":"...","text":"...","reponse":"valiny voatoro ho an'ny mpitarika..."}]}. Amin'ny malgache.`;
     renderQuestions(await callAI(p6));
 
     const p7 = lang==='fr'
@@ -447,8 +452,26 @@ function renderQuestions(raw) {
   const c = document.getElementById('questions-container');
   try {
     const data = JSON.parse(raw.replace(/```json|```/g,'').trim());
-    c.innerHTML = `<div class="question-list">${data.questions.map(q=>`<div class="question-card"><div class="q-num">${q.num}. ${q.type}</div>${q.text}</div>`).join('')}</div>`;
+    c.innerHTML = `<div class="question-list">${data.questions.map(q=>`
+      <div class="question-card">
+        <div class="q-num">${q.num}. ${q.type}</div>
+        <div class="q-text">${q.text}</div>
+        ${q.reponse ? `
+        <div class="q-answer-toggle" onclick="toggleAnswer(this)">
+          <span class="toggle-icon">▸</span> <span class="toggle-label">Réponse suggérée</span>
+        </div>
+        <div class="q-answer" style="display:none;">${q.reponse}</div>
+        ` : ''}
+      </div>`).join('')}</div>`;
   } catch { c.innerHTML = `<div class="result-block"><div class="result-block-body">${raw}</div></div>`; }
+}
+
+function toggleAnswer(el) {
+  const answer = el.nextElementSibling;
+  const icon = el.querySelector('.toggle-icon');
+  const isOpen = answer.style.display !== 'none';
+  answer.style.display = isOpen ? 'none' : 'block';
+  icon.textContent = isOpen ? '▸' : '▾';
 }
 
 function renderChants(raw) {
