@@ -443,27 +443,37 @@ async function generateAll() {
 function renderSeance(raw) {
   const c = document.getElementById('seance-container');
   try {
-    const data = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    let clean = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+    const s = clean.indexOf('{'); if (s > 0) clean = clean.substring(s);
+    const e = clean.lastIndexOf('}'); if (e !== -1) clean = clean.substring(0, e+1);
+    const data = JSON.parse(clean);
     c.innerHTML = data.steps.map(s=>`<div class="seance-step"><div class="step-time">${s.time}</div><div class="step-content"><h4>${s.title}</h4><p>${s.desc}</p></div></div>`).join('');
-  } catch { c.innerHTML = `<div class="result-block"><div class="result-block-body">${raw}</div></div>`; }
+  } catch { c.innerHTML = `<div class="result-block"><div class="result-block-body" style="white-space:pre-wrap;">${raw}</div></div>`; }
 }
 
 function renderQuestions(raw) {
   const c = document.getElementById('questions-container');
   try {
-    const data = JSON.parse(raw.replace(/```json|```/g,'').trim());
-    c.innerHTML = `<div class="question-list">${data.questions.map(q=>`
-      <div class="question-card">
-        <div class="q-num">${q.num}. ${q.type}</div>
-        <div class="q-text">${q.text}</div>
-        ${q.reponse ? `
-        <div class="q-answer-toggle" onclick="toggleAnswer(this)">
-          <span class="toggle-icon">▸</span> <span class="toggle-label">Réponse suggérée</span>
-        </div>
-        <div class="q-answer" style="display:none;">${q.reponse}</div>
-        ` : ''}
-      </div>`).join('')}</div>`;
-  } catch { c.innerHTML = `<div class="result-block"><div class="result-block-body">${raw}</div></div>`; }
+    // Nettoyage robuste du JSON
+    let clean = raw;
+    clean = clean.replace(/```json/gi, '').replace(/```/g, '').trim();
+    // Extraire uniquement le bloc JSON si du texte précède
+    const jsonStart = clean.indexOf('{');
+    if (jsonStart > 0) clean = clean.substring(jsonStart);
+    const jsonEnd = clean.lastIndexOf('}');
+    if (jsonEnd !== -1) clean = clean.substring(0, jsonEnd + 1);
+
+    const data = JSON.parse(clean);
+    const items = data.questions.map(q => {
+      const answerHtml = q.reponse
+        ? `<div class="q-answer-toggle" onclick="toggleAnswer(this)"><span class="toggle-icon">▸</span> <span class="toggle-label">Réponse suggérée</span></div><div class="q-answer" style="display:none;">${q.reponse}</div>`
+        : '';
+      return `<div class="question-card"><div class="q-num">${q.num}. ${q.type}</div><div class="q-text">${q.text}</div>${answerHtml}</div>`;
+    }).join('');
+    c.innerHTML = `<div class="question-list">${items}</div>`;
+  } catch(e) {
+    c.innerHTML = `<div class="result-block"><div class="result-block-body" style="white-space:pre-wrap;">${raw}</div></div>`;
+  }
 }
 
 function toggleAnswer(el) {
@@ -477,7 +487,10 @@ function toggleAnswer(el) {
 function renderChants(raw) {
   const c = document.getElementById('chants-container');
   try {
-    const data = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    let clean2 = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+    const cs = clean2.indexOf('{'); if (cs > 0) clean2 = clean2.substring(cs);
+    const ce = clean2.lastIndexOf('}'); if (ce !== -1) clean2 = clean2.substring(0, ce+1);
+    const data = JSON.parse(clean2);
     c.innerHTML = data.chants.map((ch,i)=>`
       <div class="chant-card">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem;margin-bottom:0.5rem;">
