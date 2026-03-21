@@ -137,7 +137,25 @@ header { text-align: center; padding: 2.5rem 1rem 2rem; }
   <div class="input-card">
     <h2><span>📖</span> <span id="lbl-ref">Passage & contexte</span></h2>
     <div class="row-2">
-      <div class="field"><label id="lbl-ref-input">Référence biblique</label><input type="text" id="inp-ref" placeholder="ex. Jean 15:1-11" /></div>
+      <div class="field">
+        <label id="lbl-ref-input">Référence biblique</label>
+        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;">
+          <select id="sel-livre" onchange="updateChapitres()" style="flex:2;min-width:120px;">
+            <option value="">— Livre —</option>
+          </select>
+          <select id="sel-chapitre" onchange="updateVersets()" style="flex:1;min-width:70px;" disabled>
+            <option value="">Ch.</option>
+          </select>
+          <select id="sel-v-debut" style="flex:1;min-width:60px;" disabled onchange="buildRef()">
+            <option value="">v.deb</option>
+          </select>
+          <span style="color:var(--text-dim);font-size:0.9rem;">—</span>
+          <select id="sel-v-fin" style="flex:1;min-width:60px;" disabled onchange="buildRef()">
+            <option value="">v.fin</option>
+          </select>
+        </div>
+        <input type="text" id="inp-ref" placeholder="ex. Jean 15:1-11" style="margin-top:0.4rem;" />
+      </div>
       <div class="field">
         <label id="lbl-theme">Thème central</label>
         <div style="display:flex;gap:0.5rem;align-items:center;">
@@ -547,6 +565,105 @@ function exportPDF() { window.print(); }
 function copyBlock(id) {
   navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>setStatus('✓ Copié !'));
 }
+// ── BIBLE PICKER ──
+const BIBLE = {
+  AT: {
+    "Genèse":50,"Exode":40,"Lévitique":27,"Nombres":36,"Deutéronome":34,
+    "Josué":24,"Juges":21,"Ruth":4,"1 Samuel":31,"2 Samuel":24,
+    "1 Rois":22,"2 Rois":25,"1 Chroniques":29,"2 Chroniques":36,
+    "Esdras":10,"Néhémie":13,"Esther":10,"Job":42,"Psaumes":150,
+    "Proverbes":31,"Ecclésiaste":12,"Cantique":8,"Ésaïe":66,
+    "Jérémie":52,"Lamentations":5,"Ézéchiel":48,"Daniel":12,
+    "Osée":14,"Joël":3,"Amos":9,"Abdias":1,"Jonas":4,"Michée":7,
+    "Nahoum":3,"Habacuc":3,"Sophonie":3,"Aggée":2,"Zacharie":14,"Malachie":4
+  },
+  NT: {
+    "Matthieu":28,"Marc":16,"Luc":24,"Jean":21,"Actes":28,
+    "Romains":16,"1 Corinthiens":16,"2 Corinthiens":13,"Galates":6,
+    "Éphésiens":6,"Philippiens":4,"Colossiens":4,"1 Thessaloniciens":5,
+    "2 Thessaloniciens":3,"1 Timothée":6,"2 Timothée":4,"Tite":3,
+    "Philémon":1,"Hébreux":13,"Jacques":5,"1 Pierre":5,"2 Pierre":3,
+    "1 Jean":5,"2 Jean":1,"3 Jean":1,"Jude":1,"Apocalypse":22
+  }
+};
+
+// Approximate verse counts per chapter for key books
+const VERSETS = {
+  "Genèse":[31,25,24,26,32,22,24,22,29,32,32,20,18,24,21,16,27,33,38,18,34,24,20,67,34,35,46,22,35,43,55,32,20,31,29,43,36,30,23,23,57,38,34,34,28,34,31,22,33,26],
+  "Exode":[22,25,22,31,23,30,25,32,35,29,10,51,22,31,27,36,16,27,25,26,36,31,33,18,40,37,21,43,46,38,18,35,23,35,35,38,29,31,43,38],
+  "Psaumes":[6,12,8,8,12,10,17,9,20,18,7,8,6,7,5,11,15,50,14,9,13,31,6,10,22,12,14,9,11,13,25,11,22,23,28,13,40,23,14,18,14,12,5,27,18,12,10,15,21,23,21,11,7,9,24,14,12,12,18,14,9,13,12,11,14,20,8,36,37,6,24,20,28,23,11,13,21,72,13,20,17,8,19,13,14,17,7,19,53,17,16,16,5,23,11,13,12,9,9,5,8,28,22,35,45,48,43,13,31,7,10,10,9,8,18,19,2,29,176,7,8,9,4,8,5,6,5,6,8,8,3,18,3,3,21,26,9,8,24,14,10,8,12,15,21,10,20,14,9,6],
+  "Jean":[51,25,36,54,49,31,27,26,44,32,13,19,24,40,20,27,20,18,28,51,29,21],
+  "Romains":[32,29,31,25,21,23,25,39,33,21,36,21,14,26,33,24],
+  "Matthieu":[25,23,17,25,48,34,29,34,38,42,30,50,58,36,39,28,27,35,30,34,46,46,39,51,46,75,66,20],
+  "Marc":[45,28,35,41,43,56,37,38,50,52,33,44,37,72,47,20],
+  "Luc":[80,52,38,44,39,49,50,56,62,42,54,59,35,35,32,31,37,43,48,47,38,71,56,53],
+  "Actes":[26,47,26,37,42,15,60,40,43,48,30,25,52,28,41,40,34,28,41,38,40,30,35,27,27,32,44,31],
+  "Éphésiens":[23,22,21,22,23,22],
+  "Philippiens":[30,20,22,26],
+  "1 Corinthiens":[31,16,23,21,13,20,40,34,28,27,36,27,21,35,23,23],
+  "Galates":[24,21,29,31,26,18],
+  "Hébreux":[14,18,19,16,14,20,28,13,28,39,40,29,25]
+};
+
+function getVersetCount(livre, chapitre) {
+  if (VERSETS[livre] && VERSETS[livre][chapitre-1]) return VERSETS[livre][chapitre-1];
+  // Fallback estimate
+  return 30;
+}
+
+(function initBible() {
+  const sel = document.getElementById('sel-livre');
+  sel.innerHTML = '<option value="">— Livre —</option>';
+  sel.innerHTML += '<optgroup label="Ancient Testament">' + Object.keys(BIBLE.AT).map(b=>`<option value="${b}">${b}</option>`).join('') + '</optgroup>';
+  sel.innerHTML += '<optgroup label="Nouveau Testament">' + Object.keys(BIBLE.NT).map(b=>`<option value="${b}">${b}</option>`).join('') + '</optgroup>';
+})();
+
+function updateChapitres() {
+  const livre = document.getElementById('sel-livre').value;
+  const selCh = document.getElementById('sel-chapitre');
+  const selVD = document.getElementById('sel-v-debut');
+  const selVF = document.getElementById('sel-v-fin');
+  selCh.innerHTML = '<option value="">Ch.</option>';
+  selVD.innerHTML = '<option value="">v.deb</option>';
+  selVF.innerHTML = '<option value="">v.fin</option>';
+  selVD.disabled = true; selVF.disabled = true;
+  if (!livre) { selCh.disabled = true; buildRef(); return; }
+  const total = BIBLE.AT[livre] || BIBLE.NT[livre] || 1;
+  for (let i = 1; i <= total; i++) selCh.innerHTML += `<option value="${i}">${i}</option>`;
+  selCh.disabled = false;
+  buildRef();
+}
+
+function updateVersets() {
+  const livre = document.getElementById('sel-livre').value;
+  const ch = parseInt(document.getElementById('sel-chapitre').value);
+  const selVD = document.getElementById('sel-v-debut');
+  const selVF = document.getElementById('sel-v-fin');
+  selVD.innerHTML = '<option value="">v.deb</option>';
+  selVF.innerHTML = '<option value="">v.fin</option>';
+  if (!livre || !ch) { selVD.disabled = true; selVF.disabled = true; buildRef(); return; }
+  const total = getVersetCount(livre, ch);
+  for (let i = 1; i <= total; i++) {
+    selVD.innerHTML += `<option value="${i}">${i}</option>`;
+    selVF.innerHTML += `<option value="${i}">${i}</option>`;
+  }
+  selVD.disabled = false; selVF.disabled = false;
+  buildRef();
+}
+
+function buildRef() {
+  const livre = document.getElementById('sel-livre').value;
+  const ch = document.getElementById('sel-chapitre').value;
+  const vd = document.getElementById('sel-v-debut').value;
+  const vf = document.getElementById('sel-v-fin').value;
+  let ref = '';
+  if (livre && ch && vd && vf) ref = `${livre} ${ch}:${vd}-${vf}`;
+  else if (livre && ch && vd) ref = `${livre} ${ch}:${vd}`;
+  else if (livre && ch) ref = `${livre} ${ch}`;
+  else if (livre) ref = livre;
+  document.getElementById('inp-ref').value = ref;
+}
+
 </script>
 </body>
 </html>
